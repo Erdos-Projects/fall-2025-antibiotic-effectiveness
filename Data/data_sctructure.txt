@@ -1,0 +1,8 @@
+microbiology_cultures_cohort.csv - https://datadryad.org/downloads/file_stream/4241339
+microbiology_cultures_adi_scores.csv - https://datadryad.org/downloads/file_stream/4241344
+microbiology_culture_antibiotic_class_exposure - https://datadryad.org/downloads/file_stream/4241351
+microbiology_cultures_demographics.csv - https://datadryad.org/downloads/file_stream/4241345
+microviology_cultures_microbial_resistance.csv - https://datadryad.org/downloads/file_stream/4241349
+microbiology_cultures_nursing_home_visits.csv - https://datadryad.org/downloads/file_stream/4241338
+microbiology_cultures_ward_info.csv - https://datadryad.org/downloads/file_stream/4241337
+microbiology_culture_prior_infecting_organism.csv - https://datadryad.org/downloads/file_stream/4241348

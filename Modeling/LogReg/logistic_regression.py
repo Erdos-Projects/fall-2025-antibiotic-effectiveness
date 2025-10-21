@@ -48,6 +48,7 @@ param_grid = {
 results_summary = []
 
 for i in antibiotics:
+    print("\n")
     print(f"Antibiotic: {i}")
     train_data = pd.read_csv(f'Data/final_dataframes/{i}_train_data.csv')
     X_train = train_data.drop(i, axis=1)
@@ -115,5 +116,5 @@ for i in antibiotics:
 
 # Save all results
 results_df = pd.DataFrame(results_summary)
-savedir = '/Modeling/LogReg/'
+savedir = 'Modeling/LogReg/'
 results_df.to_csv(os.path.join(savedir,'logistic_regression_vs_dummy_nestedCV.csv'), index=False)

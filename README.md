@@ -56,7 +56,7 @@ Feature importance analysis was then conducted to identify the most influential 
 ## Contact
 To further discuss this project or use associate code feel free to contact us: <br>
 Mustafain Ali - ma9614@g.rit.edu <br>
-Tinghao Huang - calabongaboy@gmail.com  <br>
+Tinghao Huang - tinghaohuang76@gmail.com  <br>
 Dominique Hughes - dhughe13@asu.edu <br>
 Chiara Mattamira - chiara.mattamira@gmail.com <br>
 Haejun (Stella) Oh - ohhu@mail.uc.edu <br>

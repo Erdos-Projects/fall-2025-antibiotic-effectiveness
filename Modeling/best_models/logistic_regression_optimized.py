@@ -93,9 +93,8 @@ class ModelEvaluator:
         print("\nAverage CV Metrics for Best Model:")
         for metric in self.scoring.keys():
             mean_score = cv_results[f'mean_test_{metric}'][search.best_index_]
-            std_score = cv_results[f'std_test_{metric}'][search.best_index_]
-            scores[metric] = (mean_score, std_score)
-            print(f"{metric}: {mean_score:.3f} ± {std_score:.3f}")
+            scores[metric] = mean_score
+            print(f"{metric}: {mean_score:.3f}")
         return scores
     
     def evaluate_test(self, best_model, calibrated_model, X_test, y_test, antibiotic):

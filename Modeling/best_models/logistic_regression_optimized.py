@@ -19,6 +19,7 @@ from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
 from scipy.stats import uniform
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn.utils import resample
 
 
 # Class: Model Trainer
@@ -46,11 +47,36 @@ class ModelTrainer:
         
         return search
 
-    def calibrate(self, best_model, X_train, y_train):
-        # calibrate the model
-        X_res, y_res = best_model.named_steps['smote'].fit_resample(X_train, y_train)
-        calibrated_model = CalibratedClassifierCV(best_model.named_steps['logreg'], method='sigmoid', cv='prefit')
-        calibrated_model.fit(X_res, y_res)
+    def calibrate(self, best_model, X_train, y_train, imbalance_threshold = 0.5):
+        # calibrate the best model
+        # if class imbalance exceeds threshold, downsample negatives
+        counts = y_train.value_counts(normalize=True)
+        imbalance_ratio = counts.max()
+
+        X_bal, y_bal = X_train.copy(), y_train.copy()
+        if imbalance_ratio > imbalance_threshold:
+            print(f"Downsampling negatives for calibration (ratio={imbalance_ratio:.2f}) > {imbalance_threshold}")
+            df_train = pd.concat([X_train, y_train], axis=1)
+            majority_class = y_train.mode()[0]
+            minority_class = 1 - majority_class
+            
+            df_majority = df_train[df_train[y_train.name] == majority_class]
+            df_minority = df_train[df_train[y_train.name] == minority_class]
+            
+            df_majority_downsampled = resample(
+                df_majority,
+                replace=False,
+                n_samples=len(df_minority),
+                random_state=self.random_state
+            )
+            df_balanced = pd.concat([df_majority_downsampled, df_minority])
+            X_bal, y_bal = df_balanced.drop(y_train.name, axis=1), df_balanced[y_train.name]
+        else:
+            print(f"No downsampling applied (ratio={imbalance_ratio:.2f} > {imbalance_threshold})")
+
+        #X_res, y_res = best_model.named_steps['smote'].fit_resample(X_train, y_train)
+        calibrated_model = CalibratedClassifierCV(best_model.named_steps['logreg'], method='sigmoid', cv=self.kf)
+        calibrated_model.fit(X_bal, y_bal)
 
         return calibrated_model
 
@@ -146,7 +172,7 @@ class PlotGenerator:
     def plot_feature_importance(self, best_model, X_train, antibiotic):
         logreg = best_model.named_steps['logreg']
         feature_names = X_train.columns
-        coefs = logreg.coef_.flatten()
+        coefs = np.abs(logreg.coef_.flatten())
         feature_importance = pd.DataFrame({
             'feature': feature_names,
             'importance': coefs
@@ -162,7 +188,6 @@ class PlotGenerator:
         plt.tight_layout()
         plt.savefig(os.path.join(self.output_dir, f"feature_importance_{antibiotic}.png"))
         plt.close()
-
 
 
 # main function
@@ -202,6 +227,7 @@ def main():
         'f1_weighted': make_scorer(f1_score, average='weighted', pos_label=1)
     }
 
+    # directories of input and output files
     dir = 'Data/final_dataframes/'
     output_dir = 'Modeling/best_models/results'
     antibiotics = ['Gentamicin', 'Trimethoprim_Sulfamethoxazole', 'Ciprofloxacin',
@@ -222,11 +248,17 @@ def main():
         evaluator = ModelEvaluator(scoring, output_dir)
         plotter = PlotGenerator(output_dir)
 
+        # train and find the best model 
         search = trainer.train(X_train, y_train)
         best_model = search.best_estimator_
+
+        # evaluate the CV results
         train_results.append(evaluator.evaluate_cv(search, i))
 
-        calibrated_model = trainer.calibrate(best_model, X_train, y_train)
+        # calibrate the best model using downsampling the real training data
+        calibrated_model = trainer.calibrate(best_model, X_train, y_train, imbalance_threshold = 0.6)
+
+        # evaluate test set performance
         test_results.append(evaluator.evaluate_test(best_model, calibrated_model, X_test, y_test, i))
 
         y_pred_pre = best_model.predict(X_test)

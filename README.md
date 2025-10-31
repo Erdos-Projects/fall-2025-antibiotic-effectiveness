@@ -48,12 +48,6 @@ Feature importance analysis was then conducted to identify the most influential 
  XGBoost, Scikit-Learn, Pandas, Numpy, Matplotlib, Seaborn
 
 
-
-
-
-## Folder organization and summary
-
-
 ## Contact
 To further discuss this project or use associate code feel free to contact us: <br>
 Mustafain Ali - ma9614@g.rit.edu <br>

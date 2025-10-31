@@ -33,15 +33,16 @@ For this project, we subset the dataset to:
 ## Modeling approach and main results: 
 We split the dataset into 80% training and 20% testing subsets. Of the training data, 20% was reserved as a validation set. 
 We compared baseline and advanced models: 
+- Dummy classifier
 - Logistic regression
 - Support Vector Machine (SVM)
 - K-Nearest Neighbors (KNN)
 - Random forests
 - XGBoost
 
-Model performance was evaluated using accuracy and false negative rate (FNR).
-The model with the lowest FNR on the test set was selected as the final model.
-Feature importance analysis was then conducted to identify the most influential predictors.
+We use a nested cross-validation framework i.e. an outer 5-fold CV for model selection and an inner 3-fold CV with Randomized Search for hyperparameter tuning. StandardScaler was applied to distance-based models for better feature comparability, while SMOTE was used in the pipeline to address class imbalance by oversampling resistant cases and downsampling was used to reduce the susceptible (negative) cases. 
+
+Due to better calibration curves, clear interpretation of features, and simplicity, Logistic Regression was selected as the best-performing model. The hyperparameters were rigorously tuned and evaluated on the test dataset. Consistent performance across training and testing sets was observed. 
 
 
 ## Dependencies

@@ -14,7 +14,7 @@ from sklearn.metrics import (make_scorer, confusion_matrix,
                              f1_score, precision_score, 
                              brier_score_loss, precision_recall_curve, 
                              average_precision_score, recall_score, get_scorer,
-                             auc, roc_curve, accuracy_score)
+                             auc)
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
 from scipy.stats import uniform
@@ -159,14 +159,14 @@ class PlotGenerator:
         # Feature importance
         logreg = best_model.named_steps['logreg']
         feature_names = X_train.columns
-        coefs = np.abs(logreg.coef_.flatten())
+        coefs = (logreg.coef_.flatten())
         feature_importance = pd.DataFrame({
             'feature': feature_names,
             'importance': coefs
         }).sort_values(by='importance', key=abs, ascending=False)
         feature_importance.to_csv(os.path.join(self.output_dir, f"feature_importance_{antibiotic}.csv"), index=False)
         sns.barplot(data=feature_importance.head(15), x='importance', y='feature', palette='coolwarm', ax=ax[1,1])
-        ax[1,1].set_title(f"Top 15 Feature Importances - {antibiotic}")
+        ax[1,1].set_title(f"Top Feature Importances - {antibiotic}")
 
         plt.tight_layout(rect=[0, 0, 1, 0.96])
         plt.savefig(os.path.join(self.output_dir, f"logreg_modeleval_{antibiotic}.png"), dpi=300)

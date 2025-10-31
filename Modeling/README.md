@@ -1,4 +1,4 @@
-#Folder Structure#
+**Folder Structure**
 
 There are two folders, best_models and model_selection.
 

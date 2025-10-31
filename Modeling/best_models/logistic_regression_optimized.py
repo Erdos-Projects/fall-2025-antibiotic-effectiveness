@@ -13,8 +13,8 @@ from sklearn.calibration import calibration_curve, CalibratedClassifierCV
 from sklearn.metrics import (make_scorer, confusion_matrix, 
                              f1_score, precision_score, 
                              brier_score_loss, precision_recall_curve, 
-                             accuracy_score, recall_score, get_scorer,
-                             auc, roc_curve)
+                             average_precision_score, recall_score, get_scorer,
+                             auc, roc_curve, accuracy_score)
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline
 from scipy.stats import uniform
@@ -125,50 +125,38 @@ class PlotGenerator:
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
     
-    def plot_all(self, antibiotic, y_test, y_pred_post, y_proba_post, y_proba_pre):
+    def plot_all(self, antibiotic, best_model, X_train, y_test, y_pred_post, y_proba_post, y_proba_pre):
         fig, ax = plt.subplots(2, 2, figsize=(12, 10))
         fig.suptitle(f"Logistic Regression Model Evaluation for {antibiotic}", fontsize=16, fontweight='bold')
 
-        # ROC curve
-        fpr, tpr, _ = roc_curve(y_test, y_proba_post)
-        roc_auc = auc(fpr, tpr)
-        ax[0,0].plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
-        ax[0,0].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        ax[0,0].set_title("ROC curve")
-        ax[0,0].set_xlabel("False Positive Rate")
-        ax[0,0].set_ylabel("True Positive Rate")
-        ax[0,0].legend()
-
         # Precision Recall curve
         precision, recall, _ = precision_recall_curve(y_test, y_proba_post)
-        ax[0,1].plot(recall, precision, color='purple', lw=2)
-        ax[0,1].set_title("Precision-Recall Curve")
-        ax[0,1].set_xlabel("Recall")
-        ax[0,1].set_ylabel("Precision")
+        pr_auc = auc(recall, precision)
+        ax[0,0].plot(recall, precision, color='purple', lw=2, label=f'PR AUC = {pr_auc:.2f}')
+        ax[0,0].set_title("Precision-Recall Curve")
+        ax[0,0].set_xlabel("Recall")
+        ax[0,0].set_ylabel("Precision")
+        ax[0,0].legend()
 
         # Calibration plot
         prob_true_pre, prob_pred_pre = calibration_curve(y_test, y_proba_pre, n_bins=10,strategy='quantile')
         prob_true_post, prob_pred_post = calibration_curve(y_test, y_proba_post, n_bins=10,strategy='quantile')
-        ax[1,0].plot(prob_pred_pre, prob_true_pre, marker='x', linestyle='-', label="Before Calibration")
-        ax[1,0].plot(prob_pred_post, prob_true_post, marker='o', linestyle='-', label="After Calibration")
-        ax[1,0].plot([0,1],[0,1], color='navy', linestyle='--', label="Perfect Calibration")
-        ax[1,0].set_title("Calibration Curve")
-        ax[1,0].set_xlabel("Predicted Probability")
-        ax[1,0].set_ylabel("True Probability")
-        ax[1,0].legend()
+        ax[0,1].plot(prob_pred_pre, prob_true_pre, marker='x', linestyle='-', label="Before Calibration")
+        ax[0,1].plot(prob_pred_post, prob_true_post, marker='o', linestyle='-', label="After Calibration")
+        ax[0,1].plot([0,1],[0,1], color='navy', linestyle='--', label="Perfect Calibration")
+        ax[0,1].set_title("Calibration Curve")
+        ax[0,1].set_xlabel("Predicted Probability")
+        ax[0,1].set_ylabel("True Probability")
+        ax[0,1].legend()
 
         # Confusion matrix
         cm = confusion_matrix(y_test, y_pred_post)
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax[1, 1])
-        ax[1, 1].set_title("Confusion Matrix")
-        ax[1, 1].set_xlabel("Predicted")
-        ax[1, 1].set_ylabel("Actual")
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax[1, 0])
+        ax[1, 0].set_title("Confusion Matrix")
+        ax[1, 0].set_xlabel("Predicted")
+        ax[1, 0].set_ylabel("Actual")
 
-        plt.tight_layout(rect=[0, 0, 1, 0.96])
-        plt.savefig(os.path.join(self.output_dir, f"logreg_modeleval_{antibiotic}.png"), dpi=300)
-        plt.close()
-
-    def plot_feature_importance(self, best_model, X_train, antibiotic):
+        # Feature importance
         logreg = best_model.named_steps['logreg']
         feature_names = X_train.columns
         coefs = np.abs(logreg.coef_.flatten())
@@ -176,16 +164,12 @@ class PlotGenerator:
             'feature': feature_names,
             'importance': coefs
         }).sort_values(by='importance', key=abs, ascending=False)
-
-        # Save as CSV
         feature_importance.to_csv(os.path.join(self.output_dir, f"feature_importance_{antibiotic}.csv"), index=False)
+        sns.barplot(data=feature_importance.head(15), x='importance', y='feature', palette='coolwarm', ax=ax[1,1])
+        ax[1,1].set_title(f"Top 15 Feature Importances - {antibiotic}")
 
-        # Plot
-        plt.figure(figsize=(8, 6))
-        sns.barplot(data=feature_importance.head(15), x='importance', y='feature', palette='coolwarm')
-        plt.title(f"Top 15 Feature Importances - {antibiotic}")
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.output_dir, f"feature_importance_{antibiotic}.png"))
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig(os.path.join(self.output_dir, f"logreg_modeleval_{antibiotic}.png"), dpi=300)
         plt.close()
 
 
@@ -221,14 +205,14 @@ def main():
         'accuracy': 'accuracy',
         'precision': make_scorer(precision_score, pos_label=1),
         'recall': make_scorer(recall_score, pos_label=1),
-        'roc_auc': 'roc_auc',
+        'pr_auc': make_scorer(average_precision_score),
         'fnr': make_scorer(fnr),
         'f1_weighted': make_scorer(f1_score, average='weighted', pos_label=1)
     }
 
     # directories of input and output files
     dir = 'Data/final_dataframes/'
-    output_dir = 'Modeling/best_models/results'
+    output_dir = 'Modeling/best_models/logreg_results'
     antibiotics = ['Gentamicin', 'Trimethoprim_Sulfamethoxazole', 'Ciprofloxacin',
                     'Ampicillin', 'Cefazolin','Nitrofurantoin','Piperacillin_Tazobactam',
                     'Levofloxacin', 'Ceftriaxone']
@@ -265,8 +249,7 @@ def main():
         y_pred_post = calibrated_model.predict(X_test)
         y_proba_post = calibrated_model.predict_proba(X_test)[:, 1]
 
-        plotter.plot_all(i, y_test, y_pred_post, y_proba_post, y_proba_pre)
-        plotter.plot_feature_importance(best_model, X_train, antibiotic=i)
+        plotter.plot_all(i, best_model, X_train, y_test, y_pred_post, y_proba_post, y_proba_pre)
 
     pd.DataFrame(test_results).to_csv(os.path.join(output_dir, "logreg_metrics_test_results.csv"), index=False)
     pd.DataFrame(train_results).to_csv(os.path.join(output_dir, "logreg_metrics_train_results.csv"), index=False)

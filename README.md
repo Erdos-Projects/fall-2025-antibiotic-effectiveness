@@ -35,7 +35,8 @@ We split the dataset into 80% training and 20% testing subsets. Of the training 
 We compared baseline and advanced models: 
 - Logistic regression
 - Support Vector Machine (SVM)
-- Random forests,
+- K-Nearest Neighbors (KNN)
+- Random forests
 - XGBoost
 
 Model performance was evaluated using accuracy and false negative rate (FNR).
